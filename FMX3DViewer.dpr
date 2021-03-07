@@ -18,6 +18,7 @@ uses
   u3DBoolSolid in '3dbool\u3DBoolSolid.pas',
   u3DBoolObject3D in '3dbool\u3DBoolObject3D.pas',
   u3DBoolModeller in '3dbool\u3DBoolModeller.pas',
+  uDefaultCoordinates in '3dbool\solids\uDefaultCoordinates.pas',
   uMeshUtils in 'uMeshUtils.pas',
   FMX.STEP.Importer in 'Importer\FMX.STEP.Importer.pas',
   FMX.STEP.Lexer in 'Importer\FMX.STEP.Lexer.pas',
@@ -30,7 +31,56 @@ uses
   uGen3DBoolTest2 in '3dbool\uGen3DBoolTest2.pas',
   uGen3DBoolGenCenterHole in '3dbool\uGen3DBoolGenCenterHole.pas',
   u3DBoolFMXSolid in '3dbool\u3DBoolFMXSolid.pas',
-  uDefaultCoordinates in '3dbool\uDefaultCoordinates.pas';
+  LUX.D1 in 'LUXOPHIA\LUX\LUX.D1.pas',
+  LUX.D2.M4 in 'LUXOPHIA\LUX\LUX.D2.M4.pas',
+  LUX.D2 in 'LUXOPHIA\LUX\LUX.D2.pas',
+  LUX.D2.V4 in 'LUXOPHIA\LUX\LUX.D2.V4.pas',
+  LUX.D3.M4 in 'LUXOPHIA\LUX\LUX.D3.M4.pas',
+  LUX.D3 in 'LUXOPHIA\LUX\LUX.D3.pas',
+  LUX.D3.V4 in 'LUXOPHIA\LUX\LUX.D3.V4.pas',
+  LUX.D4.M4 in 'LUXOPHIA\LUX\LUX.D4.M4.pas',
+  LUX.D4 in 'LUXOPHIA\LUX\LUX.D4.pas',
+  LUX.D4.V4 in 'LUXOPHIA\LUX\LUX.D4.V4.pas',
+  LUX.D5 in 'LUXOPHIA\LUX\LUX.D5.pas',
+  LUX.DN in 'LUXOPHIA\LUX\LUX.DN.pas',
+  LUX.M2 in 'LUXOPHIA\LUX\LUX.M2.pas',
+  LUX.M3 in 'LUXOPHIA\LUX\LUX.M3.pas',
+  LUX.M4 in 'LUXOPHIA\LUX\LUX.M4.pas',
+  LUX in 'LUXOPHIA\LUX\LUX.pas',
+  LUX.Brep in 'LUXOPHIA\LUX.Brep\LUX.Brep.pas',
+  LUX.Brep.Poin.D3 in 'LUXOPHIA\LUX.Brep\LUX.Brep.Poin.D3.pas',
+  LUX.Brep.Poin in 'LUXOPHIA\LUX.Brep\LUX.Brep.Poin.pas',
+  LUX.Brep.Face.TriFlip.D3.FMX in 'LUXOPHIA\LUX.Brep\LUX.Brep.Face.TriFlip.D3.FMX.pas',
+  LUX.Brep.Face.TriFlip.D3 in 'LUXOPHIA\LUX.Brep\LUX.Brep.Face.TriFlip.D3.pas',
+  LUX.Brep.Face.TriFlip in 'LUXOPHIA\LUX.Brep\LUX.Brep.Face.TriFlip.pas',
+  LUX.Geometry.D2 in 'LUXOPHIA\LUX.Geometry\LUX.Geometry.D2.pas',
+  LUX.Geometry.D3 in 'LUXOPHIA\LUX.Geometry\LUX.Geometry.D3.pas',
+  LUX.Geometry in 'LUXOPHIA\LUX.Geometry\LUX.Geometry.pas',
+  LUX.Graph in 'LUXOPHIA\LUX.Graph\LUX.Graph.pas',
+  LUX.Graph.Tree in 'LUXOPHIA\LUX.Graph\LUX.Graph.Tree.pas',
+  LUX.Matrix.L2 in 'LUXOPHIA\LUX.Matrix\LUX.Matrix.L2.pas',
+  LUX.Matrix.L3 in 'LUXOPHIA\LUX.Matrix\LUX.Matrix.L3.pas',
+  LUX.Matrix.L4 in 'LUXOPHIA\LUX.Matrix\LUX.Matrix.L4.pas',
+  LUX.Data.Lattice.T1 in 'LUXOPHIA\LUX.Data\LUX.Data.Lattice.T1.pas',
+  LUX.Data.Lattice.T2 in 'LUXOPHIA\LUX.Data\LUX.Data.Lattice.T2.pas',
+  LUX.Data.Lattice.T3 in 'LUXOPHIA\LUX.Data\LUX.Data.Lattice.T3.pas',
+  LUX.Data.Octree in 'LUXOPHIA\LUX.Data\LUX.Data.Octree.pas',
+  LUX.Data.Tree in 'LUXOPHIA\LUX.Data\LUX.Data.Tree.pas',
+  uLoaderCtm in 'Importer\CTMLoader\uLoaderCtm.pas',
+  uDefineTypesCtm in 'Importer\CTMLoader\uDefineTypesCtm.pas',
+  UBitTreeDecoder in 'Importer\CTMLoader\lzma\UBitTreeDecoder.pas',
+  ULZMABase in 'Importer\CTMLoader\lzma\ULZMABase.pas',
+  ULZMACommon in 'Importer\CTMLoader\lzma\ULZMACommon.pas',
+  ULZMADecoder in 'Importer\CTMLoader\lzma\ULZMADecoder.pas',
+  ULZOutWindow in 'Importer\CTMLoader\lzma\ULZOutWindow.pas',
+  unused_UCRC in 'Importer\CTMLoader\lzma\unused_UCRC.pas',
+  URangeDecoder in 'Importer\CTMLoader\lzma\URangeDecoder.pas',
+  uSimplifyMeshCtm in 'Importer\CTMLoader\uSimplifyMeshCtm.pas',
+  uGlb in 'Common\uGlb.pas',
+  uStrutil in 'Common\uStrutil.pas',
+  uFastObjLoader in 'Importer\FastObjLoader\uFastObjLoader.pas',
+  uImportDlg in 'uImportDlg.pas' {FormImportDlg},
+  uDrawMeshLines in 'uDrawMeshLines.pas';
 
 {$R *.res}
 
@@ -38,5 +88,6 @@ begin
   FormatSettings.DecimalSeparator := '.';              { <= Fuer Gleitkommazahlen !!! }
   Application.Initialize;
   Application.CreateForm(TMainForm, MainForm);
+  Application.CreateForm(TFormImportDlg, FormImportDlg);
   Application.Run;
 end.

@@ -4,11 +4,13 @@ interface
 
 uses
   System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
-  Generics.Collections, System.IOUtils,
+  Generics.Collections, System.IOUtils, System.DateUtils,
   FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs, FMX.Types3D,
   System.Math.Vectors, FMX.Objects3D, FMX.MaterialSources, FMX.Controls3D,
   FMX.Viewport3D, FMX.StdCtrls, FMX.Controls.Presentation, FMX.Layouts,
-  FMX.ListBox, uMeshUtils
+  FMX.ListBox, uMeshUtils, uDefineTypesCtm,
+  LUX.D3, LUX.Brep.Face.TriFlip.D3, LUX.Brep.Face.TriFlip.D3.FMX, FMX.ScrollBox,
+  FMX.Memo, FMX.Colors
 {$ifdef CODESITE}
   , CodeSiteLogging
 {$endif}
@@ -71,7 +73,6 @@ type
     lbCoord: TLabel;
     Viewport3D: TViewport3D;
     Light: TLight;
-    LightMaterialSource1: TLightMaterialSource;
     Grid3D: TGrid3D;
     RoundCube: TRoundCube;
     DummyCenter: TDummy;
@@ -88,6 +89,7 @@ type
     Text3D: TText3D;
     btnSaveAsObj: TButton;
     btnTransToMeshCollection: TButton;
+    btnTransToTriFlipModel: TButton;
     chbxLight: TCheckBox;
     grbxMeshGen: TGroupBox;
     grbxCSG: TGroupBox;
@@ -97,7 +99,7 @@ type
     lbCamera: TLabel;
     lbScale: TLabel;
     lbCameraZValue: TLabel;
-    lbScaleValue: TLabel;
+    lbScaleTrackbarValue: TLabel;
     lbModelName: TLabel;
     lbModelNameValue: TLabel;
     GridLayout1: TGridLayout;
@@ -114,6 +116,17 @@ type
     Label11: TLabel;
     lbZMaxValue: TLabel;
     StrokeCubeForMesh: TStrokeCube;
+    btnTest: TButton;
+    LightMaterialSource1: TLightMaterialSource;
+    PanelMain: TPanel;
+    PanelBottom: TPanel;
+    Splitter1: TSplitter;
+    txaProt: TMemo;
+    lbScaleValue: TLabel;
+    PanelScale: TPanel;
+    grbxMeshLines: TGroupBox;
+    chbxShowMeshLines: TCheckBox;
+    cobxColorMeshLines: TColorComboBox;
     procedure DummyCenterClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure ButtonCopyClick(Sender: TObject);
@@ -133,10 +146,14 @@ type
     procedure FormShow(Sender: TObject);
     procedure btnSaveAsObjClick(Sender: TObject);
     procedure btnTransToMeshCollectionClick(Sender: TObject);
+    procedure btnTransToTriFlipModelClick(Sender: TObject);
     procedure chbxLightChange(Sender: TObject);
     procedure cobx3DBoolTestChoiceChange(Sender: TObject);
     procedure btnGenCenterHoleClick(Sender: TObject);
     procedure TrackBarForScaleTracking(Sender: TObject);
+    procedure btnTestClick(Sender: TObject);
+    procedure chbxShowMeshLinesChange(Sender: TObject);
+    procedure cobxColorMeshLinesChange(Sender: TObject);
   private
     { Private-Deklarationen }
     m_sModelName:  String;
@@ -147,19 +164,42 @@ type
     m_oMinMaxSizeModel3D:     TPoint3D;   // Groesse des 3D-Modells
     m_oModelBaseScale:        TPoint3D;   // Basismodell-Skalierung
     m_oCameraBasePos:         TPoint3D;   // Kamera-Basisposition
+    m_oCameraAngleOfView:     Single;
+    //
+    m_fRotationCenterX1:     Single;
+    m_fRotationCenterY1:     Single;
+    m_fRotationAngleX1:      Single;
+    m_fRotationAngleY1:      Single;
+    m_fRotationCenterX2:     Single;
+    m_fRotationCenterY2:     Single;
+    m_fRotationAngleX2:      Single;
+    m_fRotationAngleY2:      Single;
+    //
+    // CTM/OBJ-Loader-Daten
+    m_lstFaces :      TFaces;
+    m_lstVertices:    TVertices;
+    m_lstVertexRGBA : TVertexRGBA;
+    //
     procedure ClearModel3D;
     procedure Reset3DElements(i_enActionType: TActionType);
     procedure DeleteAllMeshes;
     procedure SetMaterial;
+    function  HasMaterialSource(): Boolean;
+    procedure RemoveMaterial;
     procedure SetNewModelPosSize;
     procedure SetNewScaleOfTrackBar(i_iModelScaleFactor: Single);
+    function  Create3DModelByCtmObjData: Boolean;
+    function  HandleMeshLines(): Boolean;
+    procedure ProtCurrentMeshCounts;
   public
     { Public-Deklarationen }
     m_oModel3D: TOwnModel3D;
     //
+    // TriFlip-Modell
+    m_oFaceModel: TTriFaceModel3D;
+    //
     MyCursor: TCursor3D;
     procedure Update(Sender: TObject);
-    procedure LoadModel;           // Datei öffnen
   end;
 
 var
@@ -168,15 +208,20 @@ var
 implementation
 
 uses System.Math, FMX.ASE.Importer, FMX.DAE.Importer, FMX.OBJ.Importer,
-     uGenMeshChoice, uMathFunctionsChoice, uGen3DBoolTestChoice,
-     uGen3DBoolGenCenterHole;
+     LUX.Data.Tree,
+     uGenMeshChoice, uMathFunctionsChoice, uGen3DBoolTestChoice, uGlb,
+     uGen3DBoolGenCenterHole, uImportDlg
+//DAV: >>>
+     , uLoaderCtm, uFastObjLoader, uSimplifyMeshCtm
+//DAV: <<<
+     ;
 
 {$R *.fmx}
 
 function CalcModel3D(const aModel: TModel3D; out aMin, aMax, aMinMaxSizeModel3D, aCenterModel3D: TPoint3D): Single;
 var
  l_lFirst: Boolean;
- i, j, n: Integer;
+ i, j, n, vCnt: Integer;
  P: TPoint3D;
  F, B: Single;
  l_oMeshData: TMeshData;
@@ -188,10 +233,12 @@ begin
  aCenterModel3D     := TPoint3D.Create(0,0,0);
  l_lstMeshData := TList<TMeshData>.Create;
  n := uMeshUtils.GetListOfMeshDatas(aModel,l_lstMeshData);
- for i := 0 to n-1 do begin
+ i := 0;
+ while i < n do begin
    l_oMeshData := l_lstMeshData[i];
    with l_oMeshData do begin   // Jedes Mesh aufrufen!
-     for j := 0 to VertexBuffer.Length -1 do begin  // Alle Punkte des aktuellen Mesh erfassen
+     vCnt := VertexBuffer.Length;
+     for j := 0 to vCnt-1 do begin  // Alle Punkte des aktuellen Mesh erfassen
        P := VertexBuffer.Vertices[j];
        if l_lFirst then begin
          aMin := P;
@@ -208,6 +255,7 @@ begin
        end;
      end;
    end;
+   Inc(i);
  end;
  l_lstMeshData.Free;
  with aMin do
@@ -223,14 +271,35 @@ begin
  Result := B - F;  // Min-/Max-Abstand ermitteln
 end;
 
-function ScaleModel3D(const aStrokeCubeSize, aObjBereich: Single): TPoint3D;
+function ScaleModel3D(const aStrokeCubeSize: Single; aMinMaxSizeModel3D: TPoint3D): TPoint3D;
 var
- W: Single;
+ X, Y, Z: Single;
 begin
- W := 0;
- if aObjBereich <> 0 then
-   W := aStrokeCubeSize / aObjBereich;   // ohne Div NullVector3D-updateObjCenter
- Result := TPoint3D.Create(W,W,W);
+ X := 1;
+ Y := 1;
+ Z := 1;
+ if aStrokeCubeSize <> 0 then begin
+   X := aMinMaxSizeModel3D.X / aStrokeCubeSize * 0.5;
+   Y := aMinMaxSizeModel3D.Y / aStrokeCubeSize * 0.5;
+   Z := aMinMaxSizeModel3D.Z / aStrokeCubeSize * 0.5;
+ end;
+ Result := TPoint3D.Create(X,Y,Z);
+end;
+
+function ScaleCubeContainer(const aStrokeCubeSize: Single; aMinMaxSizeModel3D: TPoint3D): TPoint3D;
+var
+ X, Y, Z: Single;
+begin
+ X := 1;
+ Y := 1;
+ Z := 1;
+ if aMinMaxSizeModel3D.X <> 0 then
+   X := 10.0 * aStrokeCubeSize / aMinMaxSizeModel3D.X;
+ if aMinMaxSizeModel3D.Y <> 0 then
+   Y := 10.0 * aStrokeCubeSize / aMinMaxSizeModel3D.Y;
+ if aMinMaxSizeModel3D.Z <> 0 then
+   Z := 10.0 * aStrokeCubeSize / aMinMaxSizeModel3D.Z;
+ Result := TPoint3D.Create(X,Y,Z);
 end;
 
 function DivVector3D(const aV: TVector3D; const aD: Single): TVector3D;
@@ -590,6 +659,9 @@ begin
  m_oModel3D.OnDblClick := DummyCenterClick;
  m_oModel3D.HitTest := False;
  m_fModel3DMinMaxDistance := 0.0;
+ chbxShowMeshLines.IsChecked := False;
+ //
+ m_oFaceModel := Nil;
 end;
 
 procedure TMainForm.FormShow(Sender: TObject);
@@ -601,6 +673,19 @@ begin
    m_oCameraBasePos.x := Position.x;
    m_oCameraBasePos.y := Position.y;
    m_oCameraBasePos.z := Position.z;
+ end;
+ m_oCameraAngleOfView := I.CurrentCamera.AngleOfView;
+ with TDummy(I.CurrentCamera.Parent) do begin
+   m_fRotationCenterX1 := RotationCenter.X;
+   m_fRotationCenterY1 := RotationCenter.Y;
+   m_fRotationAngleX1  := RotationAngle.X;
+   m_fRotationAngleY1  := RotationAngle.Y;
+   with TDummy(Parent) do begin
+     m_fRotationCenterX2 := RotationCenter.X;
+     m_fRotationCenterY2 := RotationCenter.Y;
+     m_fRotationAngleX2  := RotationAngle.X;
+     m_fRotationAngleY2  := RotationAngle.Y;
+   end;
  end;
  self.Reset3DElements(atUnknown);
 end;
@@ -670,9 +755,14 @@ begin
    l_fScaleVal := GetScaleFactorByTrackBar(TrackBarForScale.Value);
    m_oModel3D.BeginUpdate;
    //-- m_oModel3D.Position.y := m_oCenterModel3D.y * l_fScaleVal;
+   StrokeCubeForMesh.Scale.x  := l_fScaleVal;
+   StrokeCubeForMesh.Scale.y  := l_fScaleVal;
+   StrokeCubeForMesh.Scale.z  := l_fScaleVal;
+   {DAV: >>>
    m_oModel3D.Scale.x  := l_fScaleVal;
    m_oModel3D.Scale.y  := l_fScaleVal;
    m_oModel3D.Scale.z  := l_fScaleVal;
+   --}
    m_oModel3D.EndUpdate;
    m_oModel3D.Repaint;
  end
@@ -680,7 +770,8 @@ begin
    l_fScaleVal := 0.0;
    TrackBarForScale.Value := 0.0;
  end;
- lbScaleValue.Text := Format('%4.3f',[l_fScaleVal]);
+ lbScaleTrackbarValue.Text := Format('%4.3f',[TrackBarForScale.Value]);
+ lbScaleValue.Text := Format('Scale: %4.3f',[l_fScaleVal]);
 end;
 
 procedure TMainForm.Update(Sender: TObject);
@@ -751,32 +842,43 @@ begin
  self.Reset3DElements(atUnknown);
 end;
 
-procedure TMainForm.btnLoadModelClick(Sender: TObject);
-begin
- self.LoadModel;
-end;
-
 procedure TMainForm.ClearModel3D;
-var
- I: Integer;
- LMeshes: TList<TMesh>;
- LMesh: TMesh;
 begin
  m_oModel3D.SetDesign(False);
  self.DeleteAllMeshes;
+ m_oModel3D.BeginUpdate;
  m_oModel3D.Clear;
  m_oModel3D.Position.Point  := Point3D(0,0,0);
  m_oModel3D.Scale.Point     := Point3D(1,1,1);
  m_oModel3D.RotationAngle.X := 0;
  m_oModel3D.RotationAngle.Y := 0;
  m_oModel3D.RotationAngle.Z := 0;
- m_oModel3D.Height := StrokeCubeForMesh.Height;
- m_oModel3D.Depth  := StrokeCubeForMesh.Depth;
- m_oModel3D.Width  := StrokeCubeForMesh.Width;
+ m_oModel3D.Height := 10;
+ m_oModel3D.Depth  := 10;
+ m_oModel3D.Width  := 10;
+ m_oModel3D.EndUpdate;
+ StrokeCubeForMesh.BeginUpdate;
+ StrokeCubeForMesh.Height   := 10;
+ StrokeCubeForMesh.Depth    := 10;
+ StrokeCubeForMesh.Width    := 10;
+ StrokeCubeForMesh.Position.Point := Point3D(0,-5,0);
+ StrokeCubeForMesh.RotationAngle.X := 0;
+ StrokeCubeForMesh.RotationAngle.Y := 0;
+ StrokeCubeForMesh.RotationAngle.Z := 0;
+ StrokeCubeForMesh.Scale.X := 1;
+ StrokeCubeForMesh.Scale.Y := 1;
+ StrokeCubeForMesh.Scale.Z := 1;
+ StrokeCubeForMesh.EndUpdate;
  m_fModel3DMinMaxDistance := 0.0;
  m_oMinCoord := Point3D(0.0,0.0,0.0);
  m_oMaxCoord := Point3D(0.0,0.0,0.0);
  m_oModelBaseScale := Point3D(1.0,1.0,1.0);
+ //
+ if Assigned(m_oFaceModel) then begin
+   m_oFaceModel.DeleteChilds;
+   m_oFaceModel.Free;
+   m_oFaceModel := Nil;
+ end;
  self.Update(m_oModel3D);
 end;
 
@@ -788,6 +890,37 @@ begin
  if Text3D.Visible then
    Text3D.Visible := False;
  MyCursor.SetNewClient(Nil);    // Verbindung kappen!
+ //
+ Viewport3D.BeginUpdate;
+ Viewport3D.Position.X := 0.0;
+ Viewport3D.Position.Y := 121.0;
+ Viewport3D.RotationAngle := 0.0;
+ Viewport3D.RotationCenter.X := 0.5;
+ Viewport3D.RotationCenter.Y := 0.5;
+ Viewport3D.Scale.X := 1.0;
+ Viewport3D.Scale.Y := 1.0;
+ I := Viewport3D;
+ with TControl3D(I.CurrentCamera) do begin
+   Position.x := m_oCameraBasePos.x;
+   Position.y := m_oCameraBasePos.y;
+   Position.z := m_oCameraBasePos.z;
+   lbCameraZValue.Text := Format('%3.2f',[Position.Z]);
+ end;
+ I.CurrentCamera.AngleOfView := m_oCameraAngleOfView;
+ with TDummy(I.CurrentCamera.Parent) do begin
+   RotationCenter.X := m_fRotationCenterX1;
+   RotationCenter.Y := m_fRotationCenterY1;
+   RotationAngle.X  := m_fRotationAngleX1;
+   RotationAngle.Y  := m_fRotationAngleY1;
+   with TDummy(Parent) do begin
+     RotationCenter.X := m_fRotationCenterX2;
+     RotationCenter.Y := m_fRotationCenterY2;
+     RotationAngle.X  := m_fRotationAngleX2;
+     RotationAngle.Y  := m_fRotationAngleY2;
+   end;
+ end;
+ Viewport3D.EndUpdate;
+ //
  DummyCenter.BeginUpdate;
  DummyCenter.Position.Point  := Point3D(0.0,0.0,0.0);
  DummyCenter.Scale.Point     := Point3D(1.0,1.0,1.0);
@@ -803,17 +936,19 @@ begin
  Light.Scale.Point     := Point3D(1.0,1.0,1.0);
  Light.RotationAngle.Vector := Vector3D(340.0,50.0,0.0);
  Light.EndUpdate;
-
+ //
  //-- StrokeCubeForMesh.Free;
  //-- self.BuildStrokeCubeForMesh;
  //-- m_oModel3D.Parent := StrokeCubeForMesh;
-
  StrokeCubeForMesh.BeginUpdate;
+ StrokeCubeForMesh.Depth  := 10;
+ StrokeCubeForMesh.Height := 10;
+ StrokeCubeForMesh.Width  := 10;
  StrokeCubeForMesh.Position.Point  := Point3D(0.0,-StrokeCubeForMesh.Height/2.0,0.0);
  StrokeCubeForMesh.Scale.Point     := Point3D(1.0,1.0,1.0);
  StrokeCubeForMesh.RotationAngle.Vector := Vector3D(90.0,0.0,0.0);
  StrokeCubeForMesh.EndUpdate;
-
+ //
  Grid3D.BeginUpdate;
  Grid3D.Position.Point  := Point3D(0.0,0.0,0.0);
  Grid3D.Scale.Point     := Point3D(1.0,1.0,1.0);
@@ -827,14 +962,8 @@ begin
    cobx3DBoolTestChoice.ItemIndex := -1;
  TrackBarForCamera.Value := Abs(Trunc(m_oCameraBasePos.z));
  TrackBarForScale.Value  := 50.0;
- lbScaleValue.Text := Format('%4.3f',[0.0]);
- I := Viewport3D;
- with TControl3D(I.CurrentCamera) do begin
-   Position.x := m_oCameraBasePos.x;
-   Position.y := m_oCameraBasePos.y;
-   Position.z := m_oCameraBasePos.z;
-   lbCameraZValue.Text := Format('%3.2f',[Position.Z]);
- end;
+ lbScaleTrackbarValue.Text := Format('%4.3f',[TrackBarForScale.Value]);
+ lbScaleValue.Text := Format('Scale: %4.3f',[0.0]);
  lbModelNameValue.Text := '';
  lbXMinValue.Text := '0.0';
  lbYMinValue.Text := '0.0';
@@ -887,6 +1016,23 @@ begin
  end;
 end;
 
+function TMainForm.HasMaterialSource: Boolean;
+var
+ i: Integer;
+begin
+ Result := False;
+ for i := 0 to m_oModel3D.ChildrenCount - 1 do begin
+   if m_oModel3D.Children[i] is TMesh then begin
+     Result := Assigned(TMesh(m_oModel3D.Children[i]).MaterialSource);
+   end
+   else if m_oModel3D.Children[i] is TOwnMesh then begin
+     Result := Assigned(TOwnMesh(m_oModel3D.Children[i]).MaterialSource);
+   end;
+ end;
+ for i := 0 to High(m_oModel3D.MeshCollection) do
+   Result := Assigned(TMesh(m_oModel3D.MeshCollection[i]).MaterialSource);
+end;
+
 procedure TMainForm.SetMaterial;
 var
  i: Integer;
@@ -903,89 +1049,184 @@ begin
    TMesh(m_oModel3D.MeshCollection[i]).MaterialSource := LightMaterialSource1;
 end;
 
+procedure TMainForm.RemoveMaterial;
+var
+ i: Integer;
+begin
+ for i := 0 to m_oModel3D.ChildrenCount - 1 do begin
+   if m_oModel3D.Children[i] is TMesh then begin
+     TMesh(m_oModel3D.Children[i]).MaterialSource := Nil;
+   end
+   else if m_oModel3D.Children[i] is TOwnMesh then begin
+     TOwnMesh(m_oModel3D.Children[i]).MaterialSource := Nil;
+   end;
+ end;
+ for i := 0 to High(m_oModel3D.MeshCollection) do
+   TMesh(m_oModel3D.MeshCollection[i]).MaterialSource := Nil;
+end;
+
 procedure TMainForm.SetNewModelPosSize;
+var
+ l_fMax: Double;
+ l_oScalePoint: TPoint3D;
 begin
  m_fModel3DMinMaxDistance := CalcModel3D(m_oModel3D, m_oMinCoord, m_oMaxCoord,
                                          m_oMinMaxSizeModel3D,
                                          m_oCenterModel3D );
- m_oModelBaseScale := ScaleModel3D(StrokeCubeForMesh.Width,m_fModel3DMinMaxDistance);
+ m_oModelBaseScale := ScaleModel3D(StrokeCubeForMesh.Width,m_oMinMaxSizeModel3D);
  m_oModel3D.BeginUpdate;
- m_oModel3D.Position.Point := m_oCenterModel3D * m_oModelBaseScale.x;
+ m_oModel3D.Position.Point  := Point3D(0,0,0);
+ //-- m_oModel3D.Position.Point := m_oCenterModel3D * m_oModelBaseScale.x;
  m_oModel3D.Scale.Point    := m_oModelBaseScale;
  m_oModel3D.EndUpdate;
+
+ l_fMax := Max(Max(m_oModelBaseScale.X,m_oModelBaseScale.Y),m_oModelBaseScale.Y) * 1.2;
+ StrokeCubeForMesh.BeginUpdate;
+ StrokeCubeForMesh.Width  :=  l_fMax;
+ StrokeCubeForMesh.Depth  :=  l_fMax;
+ StrokeCubeForMesh.Height :=  l_fMax;
+ StrokeCubeForMesh.Position.Point  := Point3D(0,0,0);
+ //-- StrokeCubeForMesh.Position.Point := m_oCenterModel3D * m_oModelBaseScale.x;
+ StrokeCubeForMesh.Scale.Point    := m_oModelBaseScale;
+ StrokeCubeForMesh.EndUpdate;
+ {
+ l_oScalePoint     := ScaleCubeContainer(StrokeCubeForMesh.Width,m_oMinMaxSizeModel3D);
+ StrokeCubeForMesh.BeginUpdate;
+ StrokeCubeForMesh.Width  :=  l_oScalePoint.X ;
+ StrokeCubeForMesh.Depth  :=  l_oScalePoint.Y;
+ StrokeCubeForMesh.Height :=  l_oScalePoint.Z;
+ StrokeCubeForMesh.Position.Point := m_oCenterModel3D * l_oScalePoint;
+ StrokeCubeForMesh.Scale.Point    := l_oScalePoint;
+ StrokeCubeForMesh.EndUpdate;
+ }
  self.SetNewScaleOfTrackBar(m_oModelBaseScale.x);
- lbScaleValue.Text := Format('%4.3f',[m_oModelBaseScale.x]);
+ lbScaleTrackbarValue.Text := Format('%4.3f',[TrackBarForScale.Value]);
+ lbScaleValue.Text := Format('Scale: %4.3f',[m_oModelBaseScale.x]);
  lbXMinValue.Text := Format('%4.3f',[m_oMinCoord.x]);
  lbYMinValue.Text := Format('%4.3f',[m_oMinCoord.y]);
  lbZMinValue.Text := Format('%4.3f',[m_oMinCoord.z]);
  lbXMaxValue.Text := Format('%4.3f',[m_oMaxCoord.x]);
  lbYMaxValue.Text := Format('%4.3f',[m_oMaxCoord.y]);
  lbZMaxValue.Text := Format('%4.3f',[m_oMaxCoord.z]);
+ //
+ {--
+ txaProt.Lines.Add('- SetNewModelPosSize:');
+ txaProt.Lines.Add('  - m_oMinCoord:');
+ txaProt.Lines.Add('    x-Min: ' + Format('%4.3f',[m_oMinCoord.x]));
+ txaProt.Lines.Add('    y-Min: ' + Format('%4.3f',[m_oMinCoord.y]));
+ txaProt.Lines.Add('    z-Min: ' + Format('%4.3f',[m_oMinCoord.z]));
+ txaProt.Lines.Add('  - m_oMaxCoord:');
+ txaProt.Lines.Add('    x-Max: ' + Format('%4.3f',[m_oMaxCoord.x]));
+ txaProt.Lines.Add('    y-Max: ' + Format('%4.3f',[m_oMaxCoord.y]));
+ txaProt.Lines.Add('    z-Max: ' + Format('%4.3f',[m_oMaxCoord.z]));
+ txaProt.Lines.Add('  - m_oMinMaxSizeModel3D:');
+ txaProt.Lines.Add('    x: ' + Format('%4.3f',[m_oMinMaxSizeModel3D.x]));
+ txaProt.Lines.Add('    y: ' + Format('%4.3f',[m_oMinMaxSizeModel3D.y]));
+ txaProt.Lines.Add('    z: ' + Format('%4.3f',[m_oMinMaxSizeModel3D.z]));
+ txaProt.Lines.Add('  - m_oModel3D.Position.Point:');
+ txaProt.Lines.Add('    x: ' + Format('%4.3f',[m_oModel3D.Position.Point.x]));
+ txaProt.Lines.Add('    y: ' + Format('%4.3f',[m_oModel3D.Position.Point.y]));
+ txaProt.Lines.Add('    z: ' + Format('%4.3f',[m_oModel3D.Position.Point.z]));
+ txaProt.Lines.Add('  - m_oModel3D.Scale.Point (m_oModelBaseScale):');
+ txaProt.Lines.Add('    x: ' + Format('%4.3f',[m_oModel3D.Scale.Point.x]));
+ txaProt.Lines.Add('    y: ' + Format('%4.3f',[m_oModel3D.Scale.Point.y]));
+ txaProt.Lines.Add('    z: ' + Format('%4.3f',[m_oModel3D.Scale.Point.z]));
+ txaProt.Lines.Add('  - NewScaleOfTrackBar:');
+ txaProt.Lines.Add('    x: ' + Format('%4.3f',[m_oModel3D.Scale.Point.x]));
+ txaProt.Lines.Add('    y: ' + Format('%4.3f',[m_oModel3D.Scale.Point.y]));
+ txaProt.Lines.Add('    z: ' + Format('%4.3f',[m_oModel3D.Scale.Point.z]));
+ txaProt.Lines.Add('- SetNewScaleOfTrackBar:');
+ txaProt.Lines.Add('    i_iModelScaleFactor   : ' + Format('%4.3f',[m_oModelBaseScale.x]));
+ txaProt.Lines.Add('    TrackBarForScale.Min  : ' + Format('%4.3f',[TrackBarForScale.Min]));
+ txaProt.Lines.Add('    TrackBarForScale.Max  : ' + Format('%4.3f',[TrackBarForScale.Max]));
+ txaProt.Lines.Add('    TrackBarForScale.Value: ' + Format('%4.3f',[TrackBarForScale.Value]));
+ --}
 end;
 
 procedure TMainForm.SetNewScaleOfTrackBar(i_iModelScaleFactor: Single);
 begin
  if i_iModelScaleFactor > 1.0 then begin
-   if (i_iModelScaleFactor > 1.0) and (i_iModelScaleFactor < 2.0) then begin
+   if (i_iModelScaleFactor > 1.0) and (i_iModelScaleFactor <= 2.0) then begin
      TrackBarForScale.Min   := -5.0;
      TrackBarForScale.Max   := 5.0;
+     TrackBarForScale.Value := -4.5;
    end
-   else if (i_iModelScaleFactor >= 2.0) and (i_iModelScaleFactor < 5.0) then begin
-     TrackBarForScale.Min   := -10.0;
-     TrackBarForScale.Max   := 10.0;
-   end
-   else if (i_iModelScaleFactor >= 5.0) and (i_iModelScaleFactor < 10.0) then begin
+   else if (i_iModelScaleFactor >= 2.0) and (i_iModelScaleFactor <= 5.0) then begin
      TrackBarForScale.Min   := -20.0;
      TrackBarForScale.Max   := 20.0;
+     TrackBarForScale.Value := -2.0;
    end
-   else if (i_iModelScaleFactor >= 10.0) and (i_iModelScaleFactor < 50.0) then begin
+   else if (i_iModelScaleFactor >= 5.0) and (i_iModelScaleFactor <= 10.0) then begin
+     TrackBarForScale.Min   := -40.0;
+     TrackBarForScale.Max   := 40.0;
+     TrackBarForScale.Value := -1.0;
+   end
+   else if (i_iModelScaleFactor >= 10.0) and (i_iModelScaleFactor <= 50.0) then begin
      TrackBarForScale.Min   := -50.0;
      TrackBarForScale.Max   := 50.0;
+     TrackBarForScale.Value := 0.0;
+   end
+   else if (i_iModelScaleFactor >= 50.0) and (i_iModelScaleFactor <= 100.0) then begin
+     TrackBarForScale.Min   := -100.0;
+     TrackBarForScale.Max   := 100.0;
+     TrackBarForScale.Value := 0.0;
    end
    else if (i_iModelScaleFactor >= 5.0) then begin
      TrackBarForScale.Min   := -100.0;
      TrackBarForScale.Max   := 100.0;
-   end
+     TrackBarForScale.Value := 0.0;
+   end;
  end
  else if i_iModelScaleFactor < 1.0 then begin
-   if (i_iModelScaleFactor < 1.0) and (i_iModelScaleFactor > 0.5) then begin
+   if (i_iModelScaleFactor < 1.0) and (i_iModelScaleFactor >= 0.5) then begin
      TrackBarForScale.Min   := -5.0;
-     TrackBarForScale.Max   := 5.0;
+     TrackBarForScale.Max   := 30.0;
+     TrackBarForScale.Value := 0.0;
    end
-   else if (i_iModelScaleFactor <= 0.5) and (i_iModelScaleFactor > 0.1) then begin
+   else if (i_iModelScaleFactor <= 0.5) and (i_iModelScaleFactor >= 0.1) then begin
      TrackBarForScale.Min   := -10.0;
-     TrackBarForScale.Max   := 10.0;
+     TrackBarForScale.Max   := 60.0;
+     TrackBarForScale.Value := 10.0;
    end
-   else if (i_iModelScaleFactor <= 0.1) and (i_iModelScaleFactor > 0.05) then begin
-     TrackBarForScale.Min   := -20.0;
-     TrackBarForScale.Max   := 20.0;
+   else if (i_iModelScaleFactor <= 0.1) and (i_iModelScaleFactor >= 0.05) then begin
+     TrackBarForScale.Min   := -10.0;
+     TrackBarForScale.Max   := 70.0;
+     TrackBarForScale.Value := 25.0;
    end
-   else if (i_iModelScaleFactor <= 0.05) and (i_iModelScaleFactor > 0.02) then begin
+   else if (i_iModelScaleFactor <= 0.05) and (i_iModelScaleFactor >= 0.02) then begin
      TrackBarForScale.Min   := -50.0;
-     TrackBarForScale.Max   := 50.0;
+     TrackBarForScale.Max   := 90.0;
+     TrackBarForScale.Value := 0.0;
    end
    else begin
      TrackBarForScale.Min   := -100.0;
      TrackBarForScale.Max   := 100.0;
+     TrackBarForScale.Value := 0.0;
    end;
  end
  else begin
    TrackBarForScale.Min   := -5.0;
    TrackBarForScale.Max   := 5.0;
+   TrackBarForScale.Value := -4.5;
  end;
- TrackBarForScale.Value := GetTrackBarValueByScaleFactor(i_iModelScaleFactor);
+ //-- TrackBarForScale.Value := GetTrackBarValueByScaleFactor(i_iModelScaleFactor);
 end;
 
 procedure TMainForm.cobxMeshGeneratorChoiceChange(Sender: TObject);
 begin
  if cobxMeshGeneratorChoice.ItemIndex >= 0 then begin
+   txaProt.Lines.Clear;
    lblStatus.Text := 'Generating... please wait';
    Application.ProcessMessages;
    self.ClearModel3D;
    self.Reset3DElements(atGenerateMesh);
    m_sModelName := uGenMeshChoice.ExecuteGenerator(cobxMeshGeneratorChoice.ItemIndex+1,m_oModel3D);
+   txaProt.Lines.Add('Generated Mesh-Model: ' + m_sModelName);
+   txaProt.Lines.Add('====================');
    self.SetNewModelPosSize;
    self.SetMaterial;
+   self.HandleMeshLines();
+   self.ProtCurrentMeshCounts;
    lbModelNameValue.Text := m_sModelName;
    lblStatus.Text := 'Ready';
  end;
@@ -1000,6 +1241,7 @@ var
 begin
  n := cobxMathFunctions.ItemIndex+1;
  if n > 0 then begin
+   txaProt.Lines.Clear;
    lblStatus.Text := 'Generating... please wait';
    Application.ProcessMessages;
    self.ClearModel3D;
@@ -1010,6 +1252,8 @@ begin
    m_sModelName := uMathFunctionsChoice.ExecuteMathFunction(n,m_oModel3D,
                           l_fMinX, l_fMaxX, l_fMinY, l_fMaxY, l_fMinZ, l_fMaxZ);
    lbModelNameValue.Text := m_sModelName;
+   txaProt.Lines.Add('Math-Function: ' + m_sModelName);
+   txaProt.Lines.Add('==============');
    l_fDistX := l_fMaxX - l_fMinX;
    l_fDistY := l_fMaxY - l_fMinY;
    l_fDistZ := l_fMaxZ - l_fMinZ;
@@ -1026,49 +1270,29 @@ begin
      l_fScalZ := 0.00001;
    m_oModel3D.Scale.Point := Point3D(l_fScalX,l_fScalY,l_fScalZ);
    lblStatus.Text := 'Ready';
-   m_oModel3D.Repaint;
+   if not self.HandleMeshLines() then
+     m_oModel3D.Repaint;
+   self.ProtCurrentMeshCounts;
  end;
 end;
 
 procedure TMainForm.cobx3DBoolTestChoiceChange(Sender: TObject);
 begin
  if cobx3DBoolTestChoice.ItemIndex >= 0 then begin
+   txaProt.Lines.Clear;
    lblStatus.Text := 'Processing... please wait';
    Application.ProcessMessages;
    self.ClearModel3D;
    self.Reset3DElements(at3DBool);
    m_sModelName := uGen3DBoolTestChoice.Execute3DBoolTest(cobx3DBoolTestChoice.ItemIndex+1,m_oModel3D);
+   txaProt.Lines.Add('3DBoolTest: ' + m_sModelName);
+   txaProt.Lines.Add('==========');
    self.SetNewModelPosSize;
    self.SetMaterial;
+   self.HandleMeshLines();
+   self.ProtCurrentMeshCounts;
    lbModelNameValue.Text := m_sModelName;
    lblStatus.Text := 'Ready';
- end;
-end;
-
-procedure TMainForm.LoadModel;
-var
- i: Integer;
- W: TOpenDialog;
- l_rScalePoint: TPoint3D;
-begin
- cobxMeshGeneratorChoice.ItemIndex := -1;
- W := TOpenDialog.create(Self);
- try
-   W.Filter :='3D files|*.obj;*.dae;*.ase;*.stp;*.data';
-   if W.Execute then begin
-     lblStatus.Text := 'Loading... please wait';
-     Application.ProcessMessages;
-     m_sModelName := TPath.GetFileNameWithoutExtension(W.FileName);
-     self.ClearModel3D;
-     self.Reset3DElements(atLoadModel);
-     m_oModel3D.LoadFromFile(W.FileName);
-     self.SetNewModelPosSize;
-     self.SetMaterial;
-     lbModelNameValue.Text := m_sModelName;
-     lblStatus.Text := 'Ready';
-   end;
- finally
-   W.Free;
  end;
 end;
 
@@ -1082,7 +1306,8 @@ var
  W: TSaveDialog;
 begin
  if Assigned(m_oModel3D) then begin
-   l_lstMeshData := TList<TMeshData>.Create;
+   l_oMeshData    := Nil;
+   l_lstMeshData  := TList<TMeshData>.Create;
    n := uMeshUtils.GetListOfMeshDatas(m_oModel3D,l_lstMeshData);
    if n > 0 then begin
      l_arLines := Nil;
@@ -1097,8 +1322,16 @@ begin
          l_arLines.Add('o ' + m_sModelName);
          l_arLines.Add('usemtl None');
          l_arLines.Add('s off');
-         for i := 0 to n-1 do begin
-           l_oMeshData := l_lstMeshData[i];
+         if l_lstMeshData.Count > 0 then begin
+           for i := 0 to n-1 do begin
+             l_oMeshData := l_lstMeshData[i];
+             uMeshUtils.GetStringsOfMeshDataPoint3DsForOBJ(l_oMeshData, l_arLines);
+             uMeshUtils.GetStringsOfMeshDataNormalsForOBJ(l_oMeshData, l_arLines);
+             uMeshUtils.GetStringsOfMeshDataTexCoordinatesForOBJ(l_oMeshData, l_arLines);
+             uMeshUtils.GetStringsOfMeshDataTriangleIndicesForOBJ(l_oMeshData, l_arLines);
+           end;
+         end
+         else if Assigned(l_oMeshData) then begin
            uMeshUtils.GetStringsOfMeshDataPoint3DsForOBJ(l_oMeshData, l_arLines);
            uMeshUtils.GetStringsOfMeshDataNormalsForOBJ(l_oMeshData, l_arLines);
            uMeshUtils.GetStringsOfMeshDataTexCoordinatesForOBJ(l_oMeshData, l_arLines);
@@ -1180,6 +1413,8 @@ begin
    if LLength > 0 then begin
      self.SetNewModelPosSize;
      self.SetMaterial;
+     self.HandleMeshLines();
+     self.ProtCurrentMeshCounts;
    end;
  finally
    l_lstMeshes.Free;
@@ -1188,6 +1423,135 @@ begin
  lblStatus.Text := 'Ready';
 end;
 
+procedure TMainForm.btnTransToTriFlipModelClick(Sender: TObject);
+var
+ i, j, k, l_iMeshesCnt, l_iVertexCnt, l_iOffset: Integer;
+ F, B: Single;
+ l_oPoint2D: TPointF;
+ l_oPoint3D: TPoint3D;
+ l_oMinMaxSizeModel3D, l_oCenterModel3D, l_oScalePoint: TPoint3D;
+ l_oSingle3D: TSingle3D;
+ P1, P2, P3:  TTriPoin3D;
+ l_oArea3D:  TSingleArea3D;
+ l_oOwnMesh:  TOwnMesh;
+ l_oMeshData: TMeshData;
+ l_lstMeshData: TList<TMeshData>;
+ Ns, Ts: TArray<TSingle3D>;
+begin
+{
+ Umgang mit Polygon-Modellen mit TriFlip-Datenstrukturen.
+ Da es auch Verbindungsinformationen zwischen benachbarten dreieckigen Flächen enthält,
+ sind Euler-Operationen wie das Schneiden und Verbinden von Polygonen möglich
+ (Polygone schneiden oder kombinieren).
+ Bei der Volumenmodellierung und dem computergestützten Entwurf ändern die
+ Euler-Operatoren das Diagramm der Verbindungen, um Details eines Netzes
+ hinzuzufügen oder zu entfernen, während die Topologie erhalten bleibt.
+ Die Grenzdarstellung für ein festes Objekt, seine Oberfläche, ist ein
+ Polygonnetz aus Eckpunkten, Kanten und Flächen. Die Topologie wird durch
+ das Diagramm der Verbindungen zwischen Gesichtern erfasst. Ein bestimmtes
+ Netz kann tatsächlich mehrere nicht verbundene Schalen (oder Körper) enthalten.
+ Jeder Körper kann in mehrere verbundene Komponenten unterteilt werden,
+ die jeweils durch ihre Randschleifengrenze definiert sind. Um ein hohles
+ Objekt darzustellen, sind die Innen- und Außenflächen getrennte Schalen.
+ In der Geometrie ändern Euler-Operatoren das Diagramm des Netzes, indem Flächen,
+ Kanten und Scheitelpunkte nach einfachen Regeln erstellt oder entfernt werden,
+ während die Gesamttopologie beibehalten wird, wodurch eine gültige Grenze
+ beibehalten wird (d. H. Keine Löcher eingeführt werden).
+ Die TriFlip-Modellimplementierung wird als Demo bereitgestellt, die Sie in
+ FireMonkey unter Delphi 10 Berlin ausprobieren können.
+}
+ txaProt.Lines.Clear;
+ txaProt.Lines.Add('TransToTriFlipModel:');
+ txaProt.Lines.Add('====================');
+ if Assigned(m_oFaceModel) then begin
+   m_oFaceModel.DeleteChilds;
+   m_oFaceModel.Free;
+   m_oFaceModel := Nil;
+ end;
+ lblStatus.Text := 'Transfer... please wait';
+ Application.ProcessMessages;
+ l_lstMeshData := TList<TMeshData>.Create;
+ l_iMeshesCnt := uMeshUtils.GetListOfMeshDatas(m_oModel3D, l_lstMeshData);
+ if l_iMeshesCnt > 0 then begin
+   m_oFaceModel := TTriFaceModel3D.Create;
+   //
+   l_iOffset := 0;
+   for i := 0 to l_iMeshesCnt-1 do begin
+     l_oMeshData := l_lstMeshData[i];
+     with l_oMeshData do begin
+       l_iVertexCnt := VertexBuffer.Length;
+       for j := 0 to l_iVertexCnt - 1 do begin
+         l_oPoint3D := VertexBuffer.Vertices[j];
+         l_oSingle3D.x := l_oPoint3D.x;
+         l_oSingle3D.y := l_oPoint3D.y;
+         l_oSingle3D.z := l_oPoint3D.z;
+         TTriPoin3D( TTriPoin3D.Create(m_oFaceModel.PoinModel)).Pos := l_oSingle3D;
+       end;
+       for j := 0 to l_iVertexCnt - 1 do begin
+         l_oPoint3D := VertexBuffer.Normals[j];
+         l_oSingle3D.x := l_oPoint3D.x;
+         l_oSingle3D.y := l_oPoint3D.y;
+         l_oSingle3D.z := l_oPoint3D.z;
+         Ns := Ns + [l_oSingle3D];
+       end;
+       for j := 0 to l_iVertexCnt - 1 do begin
+         l_oPoint2D := VertexBuffer.TexCoord0[j];
+         l_oSingle3D.x := l_oPoint2D.x;
+         l_oSingle3D.y := l_oPoint2D.y;
+         l_oSingle3D.z := 0.0;
+         Ts := Ts + [l_oSingle3D];
+       end;
+	     j := 0;
+	     while j < IndexBuffer.Length do begin
+         k  := IndexBuffer[j];
+		     P1 := TTriPoin3D( m_oFaceModel.PoinModel.Childs[k+l_iOffset] );
+		     P1.Tex := Ts[k];
+		     P1.Nor := Ns[k];
+		     Inc(j);
+         k  := IndexBuffer[j];
+		     P2 := TTriPoin3D( m_oFaceModel.PoinModel.Childs[k+l_iOffset] );
+	    	 P2.Tex := Ts[k];
+		     P2.Nor := Ns[k];
+		     Inc(j);
+         k  := IndexBuffer[j];
+		     P3 := TTriPoin3D( m_oFaceModel.PoinModel.Childs[k+l_iOffset] );
+		     P3.Tex := Ts[k];
+		     P3.Nor := Ns[k];
+		     m_oFaceModel.AddFace( P1, P2, P3 );
+		     Inc(j);
+       end;
+     end;
+     l_iOffset := l_iOffset + l_iVertexCnt;
+     SetLength(Ns,0);
+     SetLength(Ts,0);
+   end;
+   m_oFaceModel.JoinEdges;    // <- Erzeugt das reduzierte TriFlipModell!
+   l_oArea3D := m_oFaceModel.GetBoundingBox;
+  //
+   self.DeleteAllMeshes;
+   //
+   l_oMeshData := TMeshData.Create;
+   TriFaceMakeGeometry(m_oFaceModel, l_oMeshData);
+   l_oMeshData.CalcFaceNormals;
+   l_oMeshData.CalcTangentBinormals;
+   //
+   l_oOwnMesh := TOwnMesh.Create(m_oModel3D);
+   l_oOwnMesh.Data := l_oMeshData;
+   m_oModel3D.AddObject(l_oOwnMesh);
+   //
+   self.SetNewModelPosSize;
+   if not self.HasMaterialSource() then
+     self.SetMaterial;
+   self.HandleMeshLines;
+   self.ProtCurrentMeshCounts;
+   lbModelNameValue.Text := m_sModelName;
+ end
+ else begin
+   MessageDlg('There are no Meshes!', TMsgDlgType.mtInformation, [TMsgDlgBtn.mbOK], 0);
+ end;
+ l_lstMeshData.Free;
+ lblStatus.Text := 'Ready';
+end;
 
 procedure TMainForm.btnGenCenterHoleClick(Sender: TObject);
 var
@@ -1195,6 +1559,7 @@ var
  l_oMesh: TOwnMesh;
  l_lstMeshData: TList<TMeshData>;
 begin
+ txaProt.Lines.Clear;
  lblStatus.Text := 'Generation hole... please wait';
  Application.ProcessMessages;
  l_lstMeshData := TList<TMeshData>.Create;
@@ -1212,9 +1577,287 @@ begin
    }
    self.SetNewModelPosSize;
    self.SetMaterial;
-   m_oModel3D.Repaint;
+   if not self.HandleMeshLines() then
+     m_oModel3D.Repaint;
+   self.ProtCurrentMeshCounts;
  end;
  lblStatus.Text := 'Ready';
+end;
+
+procedure TMainForm.btnLoadModelClick(Sender: TObject);
+var
+ l_lOk: Boolean;
+ i, l_iAgress, l_iStartTri, l_iTargetTri: Integer;
+ l_fRatio: Real;
+ l_sExt, l_sStr, l_sFilePath: String;
+ //-- l_oOpenDialog: TOpenDialog;
+ l_rScalePoint: TPoint3D;
+ l_dtStartTime: TDateTime;
+ l_iSec: Int64;
+begin
+ l_lOk := True;
+ txaProt.Lines.Clear;
+ cobxMeshGeneratorChoice.ItemIndex := -1;
+ if FormImportDlg.ShowModal = mrOk then begin
+   l_sFilePath := FormImportDlg.FileName;
+   l_sExt := UpperCase(TPath.GetExtension(l_sFilePath));
+   m_sModelName := TPath.GetFileNameWithoutExtension(l_sFilePath);
+   //
+   txaProt.Lines.Add('Load Model: ' + m_sModelName);
+   txaProt.Lines.Add('===========');
+   lblStatus.Text := 'Loading... please wait';
+   Application.ProcessMessages;
+   self.ClearModel3D;
+   self.Reset3DElements(atLoadModel);
+   l_dtStartTime := NOW;
+   if l_sExt = '.STP' then begin
+     // Step noch nicht implementiert!
+     MessageDlg('Kein Step-Loader implementiert!',
+                TMsgDlgType.mtInformation, [TMsgDlgBtn.mbOK], 0);
+     lblStatus.Text := 'Ready';
+     l_lOk := False;
+   end
+   else if (l_sExt = '.CTM') or (l_sExt = '.OBJ') then begin
+     if l_sExt = '.OBJ' then begin
+       uFastObjLoader.Load3DObjModel(l_sFilePath, m_lstFaces,
+                        m_lstVertices, m_lstVertexRGBA);
+     end
+     else begin
+       FormImportDlg.CTMSimplifyMeshChecked;
+       FormImportDlg.CTMAgress;
+       FormImportDlg.CTMRatio;
+       uLoaderCtm.ReadCTM(l_sFilePath, m_lstFaces,
+                        m_lstVertices, m_lstVertexRGBA);
+       if FormImportDlg.CTMSimplifyMeshChecked then begin
+         l_iTargetTri := Round(length(m_lstFaces) * FormImportDlg.CTMRatio);
+         uSimplifyMeshCtm.SimplifyMeshCtm(m_lstFaces, m_lstVertices, m_lstVertexRGBA,
+                        l_iTargetTri, FormImportDlg.CTMAgress);
+       end;
+     end;
+     if Length(m_lstFaces) > 0 then begin
+       self.Create3DModelByCtmObjData;
+     end;
+     SetLength(m_lstFaces,0);
+     SetLength(m_lstVertices,0);
+     SetLength(m_lstVertexRGBA,0);
+   end
+   else begin
+     m_sModelName := TPath.GetFileNameWithoutExtension(l_sFilePath);
+     m_oModel3D.LoadFromFile(l_sFilePath);
+   end;
+   if l_lOk then begin
+     l_iSec := SecondsBetween(Now, l_dtStartTime);
+     lblStatus.Text := 'Ready - Sec: ' + IntToStr(l_iSec);
+     txaProt.Lines.Add('- Load Time in sec: ' + IntToStr(l_iSec));
+     self.SetNewModelPosSize;
+     if not self.HasMaterialSource() then
+       self.SetMaterial;
+     self.HandleMeshLines;
+     self.ProtCurrentMeshCounts;
+     lbModelNameValue.Text := m_sModelName;
+   end;
+ end;
+end;
+
+function TMainForm.Create3DModelByCtmObjData: Boolean;
+var
+ l_lWithColor: Boolean;
+ i, j:  Integer;
+ l_oColorRec: TAlphaColorRec;     // in System.UITypes
+ l_oColor:    TAlphaColor;        // in System.UITypes
+ l_lstIndexBuffer:  TIndexBuffer;
+ l_lstVertexBuffer: TVertexBuffer;
+ l_oPoint3D: TPoint3D;
+ l_oBmp: TBitmap;
+ l_oBmpData: TBitmapData;
+ l_oColTexture: TTextureMaterialSource;
+ l_oOwnMesh:  TOwnMesh;
+ l_oMeshData: TMeshData;
+ l_iIdx: Cardinal;
+ l_hshColors: TDictionary<TAlphaColor, Cardinal>;
+ l_iColorsCap, l_iColorsCnt: Integer;
+ l_arColors: array of TAlphaColor;
+begin
+ l_hshColors := TDictionary<TAlphaColor, Cardinal>.Create;
+ l_iColorsCap := 1000;
+ SetLength(l_arColors,l_iColorsCap);
+ l_iIdx := 0;
+ l_iColorsCnt := 1;
+ l_arColors[l_iIdx] := TAlphaColors.White;
+ l_hshColors.Add(TAlphaColors.Red,l_iIdx);
+ //
+ l_oMeshData := TMeshData.Create;
+ //-- l_oMeshData.ChangeFormat([TVertexFormat.Vertex,TVertexFormat.Normal,TVertexFormat.TexCoord0,
+ //--                          TVertexFormat.BiNormal,TVertexFormat.Tangent,TVertexFormat.Color0]);
+ l_lstIndexBuffer  := l_oMeshData.IndexBuffer;
+ l_lstIndexBuffer.Length := Length(m_lstFaces)*3;
+ for i := 0 to High(m_lstFaces) do begin
+   j := i * 3;
+   l_lstIndexBuffer[j]   := m_lstFaces[i].X;
+   l_lstIndexBuffer[j+1] := m_lstFaces[i].Y;
+   l_lstIndexBuffer[j+2] := m_lstFaces[i].Z;
+ end;
+ l_lstVertexBuffer := l_oMeshData.VertexBuffer;
+ l_lstVertexBuffer.Length := Length(m_lstVertices);
+ l_lWithColor := Length(m_lstVertexRGBA) > 0;
+ for i := 0 to High(m_lstVertices) do begin
+   l_oPoint3D.X := m_lstVertices[i].X;
+   l_oPoint3D.Y := m_lstVertices[i].Y;
+   l_oPoint3D.Z := m_lstVertices[i].Z;
+   l_lstVertexBuffer.Vertices[i] := l_oPoint3D;
+   if l_lWithColor then begin
+     l_oColorRec.R := m_lstVertexRGBA[i].R;
+     l_oColorRec.G := m_lstVertexRGBA[i].G;
+     l_oColorRec.B := m_lstVertexRGBA[i].B;
+     l_oColorRec.A := m_lstVertexRGBA[i].A;
+     l_oColor := l_oColorRec.Color;
+     l_iIdx := 0;
+     if not l_hshColors.TryGetValue(l_oColor,l_iIdx) then begin
+       Inc(l_iColorsCnt);
+       if l_iColorsCnt > l_iColorsCap then begin
+         l_iColorsCap := l_iColorsCap + 1000;
+         SetLength(l_arColors,l_iColorsCap);
+       end;
+       l_iIdx := l_iColorsCnt - 1;
+       l_arColors[l_iIdx] := l_oColor;
+       l_hshColors.Add(l_oColor,l_iIdx);
+     end;
+     l_lstVertexBuffer.TexCoord0[i] := PointF(0, l_iIdx)
+   end;
+ end;
+ l_oMeshData.CalcFaceNormals;
+ l_oMeshData.CalcTangentBinormals;
+ //
+ l_oOwnMesh := TOwnMesh.Create(m_oModel3D);
+ l_oOwnMesh.Data := l_oMeshData;
+ //
+ if l_lWithColor then begin
+   l_oBmp := TBitmap.Create(2,l_iColorsCnt);
+   try
+     if l_oBmp.Map(TMapAccess.ReadWrite,l_oBmpData)then begin
+       for j := 0 to l_iColorsCnt-1 do begin
+         l_oBmpData.SetPixel(0, j, l_arColors[j]);
+         l_oBmpData.SetPixel(1, j, l_arColors[j]);
+       end;
+     end;
+   finally
+     l_oBmp.Unmap(l_oBmpData);
+   end;
+   {
+   l_oColTexture:= TTextureMaterialSource.Create(l_oMesh);
+   l_oColTexture.Parent := l_oMesh;
+   l_oColTexture.Texture.Assign(l_oBmp);
+   l_oMesh.MaterialSource := l_oColTexture;
+   }
+   l_oOwnMesh.MaterialSource := LightMaterialSource1;
+   LightMaterialSource1.Texture.Assign(l_oBmp);
+   l_oBmp.Free;
+ end;
+ l_hshColors.Clear;
+ l_hshColors.Free;
+ SetLength(l_arColors,0);
+ //
+ m_oModel3D.AddObject(l_oOwnMesh);
+ Result := True;
+end;
+
+procedure TMainForm.chbxShowMeshLinesChange(Sender: TObject);
+begin
+ self.HandleMeshLines;
+end;
+
+procedure TMainForm.cobxColorMeshLinesChange(Sender: TObject);
+begin
+ self.HandleMeshLines;
+end;
+
+function TMainForm.HandleMeshLines(): Boolean;
+var
+ i: Integer;
+ l_lDrawMeshLines, l_lWasChanged: Boolean;
+ l_oColor: TAlphaColor;
+ l_oOwnMesh: TOwnMesh;
+ l_lstOwnMeshes: TList<TOwnMesh>;
+begin
+ l_lWasChanged := False;
+ l_lDrawMeshLines := chbxShowMeshLines.IsChecked;
+ l_oColor := cobxColorMeshLines.Color;
+ l_lstOwnMeshes := TList<TOwnMesh>.Create;
+ try
+   for i := 0 to m_oModel3D.ChildrenCount - 1 do begin
+     if m_oModel3D.Children[i] is TOwnMesh then begin
+       l_lstOwnMeshes.Add(TOwnMesh(m_oModel3D.Children[i]));
+     end;
+   end;
+   if l_lstOwnMeshes.Count > 0 then begin
+     for l_oOwnMesh in l_lstOwnMeshes do begin
+       if l_oOwnMesh.DrawMeshLines <> l_lDrawMeshLines then begin
+         l_lWasChanged := True;
+         l_oOwnMesh.DrawMeshLines := l_lDrawMeshLines;
+       end;
+       if l_oOwnMesh.MeshLineColor <> l_oColor then begin
+         l_lWasChanged := True;
+         l_oOwnMesh.MeshLineColor := l_oColor;
+       end;
+     end
+   end;
+ finally
+   l_lstOwnMeshes.Free;
+ end;
+ if l_lWasChanged then
+   m_oModel3D.Repaint;
+ Result := l_lWasChanged;
+end;
+
+procedure TMainForm.ProtCurrentMeshCounts;
+var
+ i, l_iCntVertices, l_iCntIndices: Integer;
+ l_lstMeshes: TList<TMesh>;
+ l_lstOwnMeshes: TList<TOwnMesh>;
+ l_oMeshData: TMeshData;
+ l_oMesh:     TMesh;
+ l_oOwnMesh:  TOwnMesh;
+begin
+ l_iCntVertices := 0;
+ l_iCntIndices  := 0;
+ l_lstMeshes    := TList<TMesh>.Create;
+ l_lstOwnMeshes := TList<TOwnMesh>.Create;
+ try
+   for i := 0 to m_oModel3D.ChildrenCount - 1 do begin
+     if m_oModel3D.Children[i] is TMesh then begin
+       l_lstMeshes.Add(TMesh(m_oModel3D.Children[i]));
+     end
+     else if m_oModel3D.Children[i] is TOwnMesh then begin
+       l_lstOwnMeshes.Add(TOwnMesh(m_oModel3D.Children[i]));
+     end;
+   end;
+   if l_lstMeshes.Count > 0 then begin
+     for l_oMesh in l_lstMeshes do begin
+       l_oMeshData := l_oMesh.Data;
+       l_iCntVertices := l_iCntVertices + l_oMeshData.VertexBuffer.Length;
+       l_iCntIndices  := l_iCntIndices  + l_oMeshData.IndexBuffer.Length;
+     end
+   end;
+   if l_lstOwnMeshes.Count > 0 then begin
+     for l_oOwnMesh in l_lstOwnMeshes do begin
+       l_oMeshData := l_oOwnMesh.Data;
+       l_iCntVertices := l_iCntVertices + l_oMeshData.VertexBuffer.Length;
+       l_iCntIndices  := l_iCntIndices  + l_oMeshData.IndexBuffer.Length;
+     end
+   end;
+   if l_iCntVertices > 0 then begin
+     txaProt.Lines.Add('- Count Vertices: ' + IntToStr(l_iCntVertices));
+     txaProt.Lines.Add('- Count Indices : ' + IntToStr(l_iCntIndices));
+   end;
+ finally
+   l_lstMeshes.Free;
+   l_lstOwnMeshes.Free;
+ end;
+end;
+
+procedure TMainForm.btnTestClick(Sender: TObject);
+begin
+ txaProt.Lines.Clear;
 end;
 
 end.

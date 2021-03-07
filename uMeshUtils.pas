@@ -2,7 +2,7 @@ unit uMeshUtils;
 
 interface
 uses System.SysUtils, System.Types, System.Classes, Generics.Collections,
-     FMX.Types, FMX.Graphics,
+     System.UITypes, FMX.Types, FMX.Graphics,
      FMX.Types3D, FMX.Objects3D, System.Math, System.Math.Vectors, FMX.Utils;
 
 type
@@ -11,10 +11,17 @@ type
 
 //-------------------------------- TOwnMesh ------------------------------------
 TOwnMesh = class(TCustomMesh)
+private
+  FDrawMeshLines: Boolean;
+  FMeshLineColor:  TAlphaColor;
+protected
+  procedure Render; override;
 public
   constructor Create(AOwner: TComponent); override;
   destructor Destroy; override;
 published
+  property DrawMeshLines: Boolean read FDrawMeshLines write FDrawMeshLines;
+  property MeshLineColor: TAlphaColor read FMeshLineColor write FMeshLineColor;
   property Data;
 end;
 
@@ -54,16 +61,31 @@ procedure GetStringsOfMeshDataTriangleIndicesForOBJ(i_oMeshData: TMeshData; i_ar
 
 implementation
 
+ uses uDrawMeshLines;
+
 //-------------------------------- TOwnMesh ------------------------------------
 
 constructor TOwnMesh.Create(AOwner: TComponent);
 begin
  inherited;
+ FDrawMeshLines := False;
+ FMeshLineColor := TAlphaColors.Black;
 end;
 
 destructor TOwnMesh.Destroy;
 begin
  inherited;
+end;
+
+procedure TOwnMesh.Render;
+begin
+ if FDrawMeshLines then begin
+   Context.SetMatrix(GetMeshMatrix * AbsoluteMatrix);
+   Context.DrawMeshLines(Data, TPoint3D.Zero, TPoint3D.Create(10, 10, 10), Opacity, FMeshLineColor);
+ end
+ else begin
+   inherited Render;
+ end;
 end;
 
 //-------------------------------- TOwnModel3D ---------------------------------

@@ -10,249 +10,14 @@ object MainForm: TMainForm
   OnCreate = FormCreate
   OnShow = FormShow
   DesignerMasterStyle = 0
-  object Layout1: TLayout
-    Align = Top
-    Size.Width = 891.000000000000000000
-    Size.Height = 121.000000000000000000
-    Size.PlatformDefault = False
-    TabOrder = 0
-    object Layout2: TLayout
-      Align = Client
-      Size.Width = 891.000000000000000000
-      Size.Height = 43.000000000000000000
-      Size.PlatformDefault = False
-      TabOrder = 0
-      object ButtonCopy: TButton
-        Align = Left
-        Margins.Left = 5.000000000000000000
-        Margins.Top = 5.000000000000000000
-        Margins.Right = 5.000000000000000000
-        Margins.Bottom = 5.000000000000000000
-        Position.X = 145.000000000000000000
-        Position.Y = 5.000000000000000000
-        Size.Width = 92.000000000000000000
-        Size.Height = 33.000000000000000000
-        Size.PlatformDefault = False
-        TabOrder = 1
-        Text = 'Copy'
-        OnClick = ButtonCopyClick
-      end
-      object ButtonDel: TButton
-        Align = Left
-        Margins.Left = 5.000000000000000000
-        Margins.Top = 5.000000000000000000
-        Margins.Right = 5.000000000000000000
-        Margins.Bottom = 5.000000000000000000
-        Position.X = 247.000000000000000000
-        Position.Y = 5.000000000000000000
-        Size.Width = 92.000000000000000000
-        Size.Height = 33.000000000000000000
-        Size.PlatformDefault = False
-        TabOrder = 0
-        Text = 'Delete Copy'
-        OnClick = ButtonDelClick
-      end
-      object lbCoord: TLabel
-        Align = Client
-        Size.Width = 547.000000000000000000
-        Size.Height = 43.000000000000000000
-        Size.PlatformDefault = False
-        TextSettings.HorzAlign = Center
-        Text = '...'
-      end
-      object chbxMove: TCheckBox
-        Align = Left
-        Margins.Left = 5.000000000000000000
-        Margins.Top = 5.000000000000000000
-        Margins.Right = 5.000000000000000000
-        Margins.Bottom = 5.000000000000000000
-        Position.X = 5.000000000000000000
-        Position.Y = 5.000000000000000000
-        Size.Width = 60.000000000000000000
-        Size.Height = 33.000000000000000000
-        Size.PlatformDefault = False
-        TabOrder = 3
-        Text = 'Move'
-        OnChange = chbxMoveChange
-      end
-      object chbxLight: TCheckBox
-        Align = Left
-        IsChecked = True
-        Margins.Left = 5.000000000000000000
-        Margins.Top = 5.000000000000000000
-        Margins.Right = 5.000000000000000000
-        Margins.Bottom = 5.000000000000000000
-        Position.X = 75.000000000000000000
-        Position.Y = 5.000000000000000000
-        Size.Width = 60.000000000000000000
-        Size.Height = 33.000000000000000000
-        Size.PlatformDefault = False
-        TabOrder = 2
-        Text = 'Light'
-        OnChange = chbxLightChange
-      end
-    end
-    object TrackBarForCamera: TTrackBar
-      Align = Top
-      CanParentFocus = True
-      Orientation = Horizontal
-      Margins.Left = 100.000000000000000000
-      Margins.Top = 10.000000000000000000
-      Margins.Right = 60.000000000000000000
-      Margins.Bottom = 10.000000000000000000
-      Position.X = 100.000000000000000000
-      Position.Y = 10.000000000000000000
-      Size.Width = 731.000000000000000000
-      Size.Height = 19.000000000000000000
-      Size.PlatformDefault = False
-      TabOrder = 2
-      Value = 20.000000000000000000
-      OnTracking = TrackBarForCameraTracking
-    end
-    object TrackBarForScale: TTrackBar
-      Align = Top
-      CanParentFocus = True
-      Min = -100.000000000000000000
-      Orientation = Horizontal
-      Margins.Left = 100.000000000000000000
-      Margins.Top = 10.000000000000000000
-      Margins.Right = 60.000000000000000000
-      Margins.Bottom = 10.000000000000000000
-      Position.X = 100.000000000000000000
-      Position.Y = 49.000000000000000000
-      Size.Width = 731.000000000000000000
-      Size.Height = 19.000000000000000000
-      Size.PlatformDefault = False
-      TabOrder = 1
-      OnTracking = TrackBarForScaleTracking
-    end
-    object lbCamera: TLabel
-      Position.X = 10.000000000000000000
-      Position.Y = 12.000000000000000000
-      Size.Width = 95.000000000000000000
-      Size.Height = 17.000000000000000000
-      Size.PlatformDefault = False
-      Text = 'Camera: z-Axis'
-      TabOrder = 4
-    end
-    object lbScale: TLabel
-      Position.X = 11.000000000000000000
-      Position.Y = 50.000000000000000000
-      Size.Width = 63.000000000000000000
-      Size.Height = 17.000000000000000000
-      Size.PlatformDefault = False
-      Text = 'Scale: (x,y,z)'
-      TabOrder = 3
-    end
-    object lbCameraZValue: TLabel
-      Position.X = 840.000000000000000000
-      Position.Y = 10.000000000000000000
-      Size.Width = 52.000000000000000000
-      Size.Height = 17.000000000000000000
-      Size.PlatformDefault = False
-      Text = '...'
-      TabOrder = 6
-    end
-    object lbScaleValue: TLabel
-      Position.X = 840.000000000000000000
-      Position.Y = 49.000000000000000000
-      Size.Width = 52.000000000000000000
-      Size.Height = 17.000000000000000000
-      Size.PlatformDefault = False
-      Text = '...'
-      TabOrder = 5
-    end
-  end
-  object Viewport3D: TViewport3D
-    Align = Client
-    Color = claDodgerblue
-    Size.Width = 891.000000000000000000
-    Size.Height = 567.000000000000000000
-    Size.PlatformDefault = False
-    OnMouseDown = Viewport3DMouseDown
-    OnMouseMove = Viewport3DMouseMove
-    OnMouseWheel = Viewport3DMouseWheel
-    object Light: TLight
-      HitTest = True
-      Color = claWhite
-      LightType = Directional
-      SpotCutOff = 100.000000000000000000
-      SpotExponent = 1.000000000000000000
-      Position.X = -8.000000000000000000
-      Position.Y = -5.000000000000000000
-      Position.Z = -5.000000000000000000
-      RotationAngle.X = 340.000000000000000000
-      RotationAngle.Y = 50.000000000000000000
-      Width = 1.000000000000000000
-      Height = 1.000000000000000000
-      Depth = 1.000000000000000000
-      OnClick = DummyCenterClick
-      Quanternion = 
-        '(0.142244502902031,-0.416197538375854,-0.0996005684137344,-0.892' +
-        '538726329803)'
-    end
-    object Grid3D: TGrid3D
-      Marks = 4.000000000000000000
-      Frequency = 1.000000000000000000
-      LineColor = x50505050
-      RotationAngle.X = 90.000000000000000000
-      Locked = True
-      Width = 50.000000000000000000
-      Height = 30.000000000000000000
-      Depth = 0.001000000047497451
-      Opacity = 0.500000000000000000
-      HitTest = False
-      OnClick = DummyCenterClick
-      Quanternion = '(0.707106590270996,0,0,0.707106947898865)'
-    end
-    object RoundCube: TRoundCube
-      Position.X = 10.000000000000000000
-      Position.Y = -3.000000000000000000
-      Scale.Y = 2.000000000000000000
-      RotationAngle.Y = 61.441722869873050000
-      Width = 1.587262749671936000
-      Height = 2.160593032836914000
-      Depth = 1.000000000000000000
-      OnClick = DummyCenterClick
-      MaterialSource = LightMaterialSource1
-      Quanternion = '(0,0.5108562707901,0,0.859666287899017)'
-    end
-    object DummyCenter: TDummy
-      Locked = True
-      Width = 0.400000005960464500
-      Height = 0.400000005960464500
-      Depth = 0.400000005960464500
-      OnClick = DummyCenterClick
-    end
-    object Text3D: TText3D
-      Position.Y = 6.000000000000000000
-      Width = 16.000000000000000000
-      Height = 5.000000000000000000
-      Depth = 0.039999999105930330
-      HitTest = False
-      Font.Size = 1.000000000000000000
-      Text = 'Math Function'
-      WordWrap = False
-      Flatness = 1.000000000000000000
-      Sides = [Front, Back, Shaft]
-    end
-    object StrokeCubeForMesh: TStrokeCube
-      Color = claWhite
-      Position.Y = -5.000000000000000000
-      Width = 10.000000000000000000
-      Height = 10.000000000000000000
-      Depth = 10.000000000000000000
-      OnClick = DummyCenterClick
-    end
-  end
   object LightMaterialSource1: TLightMaterialSource
     Diffuse = claWhite
     Ambient = claGray
     Emissive = claNull
     Specular = claLightgray
     Shininess = 30
-    Left = 792
-    Top = 113
+    Left = 800
+    Top = 129
   end
   object PanelRight: TPanel
     Align = MostRight
@@ -260,19 +25,22 @@ object MainForm: TMainForm
     Size.Width = 177.000000000000000000
     Size.Height = 688.000000000000000000
     Size.PlatformDefault = False
-    TabOrder = 2
+    TabOrder = 1
     object btnLoadModel: TButton
+      StyledSettings = [Family, Size]
       Margins.Left = 5.000000000000000000
       Margins.Top = 5.000000000000000000
       Margins.Right = 5.000000000000000000
       Margins.Bottom = 5.000000000000000000
       Position.X = 5.000000000000000000
-      Position.Y = 136.000000000000000000
+      Position.Y = 129.000000000000000000
       Size.Width = 167.000000000000000000
-      Size.Height = 44.000000000000000000
+      Size.Height = 33.000000000000000000
       Size.PlatformDefault = False
-      TabOrder = 3
+      TabOrder = 5
       Text = 'Load Model'
+      TextSettings.Font.StyleExt = {00070000000000000004000000}
+      TextSettings.FontColor = claBlue
       OnClick = btnLoadModelClick
     end
     object StatusBar: TStatusBar
@@ -281,7 +49,7 @@ object MainForm: TMainForm
       Size.Width = 177.000000000000000000
       Size.Height = 22.000000000000000000
       Size.PlatformDefault = False
-      TabOrder = 4
+      TabOrder = 6
       object lblStatus: TLabel
         Size.Width = 177.000000000000000000
         Size.Height = 23.000000000000000000
@@ -296,11 +64,11 @@ object MainForm: TMainForm
       Margins.Right = 5.000000000000000000
       Margins.Bottom = 5.000000000000000000
       Position.X = 5.000000000000000000
-      Position.Y = 617.000000000000000000
+      Position.Y = 637.000000000000000000
       Size.Width = 167.000000000000000000
-      Size.Height = 44.000000000000000000
+      Size.Height = 24.000000000000000000
       Size.PlatformDefault = False
-      TabOrder = 2
+      TabOrder = 3
       Text = 'Clear'
       OnClick = btnClearClick
     end
@@ -311,11 +79,11 @@ object MainForm: TMainForm
       Margins.Right = 5.000000000000000000
       Margins.Bottom = 5.000000000000000000
       Position.X = 5.000000000000000000
-      Position.Y = 561.000000000000000000
+      Position.Y = 607.000000000000000000
       Size.Width = 167.000000000000000000
-      Size.Height = 44.000000000000000000
+      Size.Height = 24.000000000000000000
       Size.PlatformDefault = False
-      TabOrder = 1
+      TabOrder = 2
       Text = 'Save'
       ParentShowHint = False
       ShowHint = True
@@ -328,27 +96,47 @@ object MainForm: TMainForm
       Margins.Right = 5.000000000000000000
       Margins.Bottom = 5.000000000000000000
       Position.X = 5.000000000000000000
-      Position.Y = 506.000000000000000000
+      Position.Y = 512.000000000000000000
       Size.Width = 167.000000000000000000
-      Size.Height = 44.000000000000000000
+      Size.Height = 24.000000000000000000
       Size.PlatformDefault = False
-      TabOrder = 0
+      TabOrder = 1
       Text = 'Trans -> MeshCollection'
       ParentShowHint = False
       ShowHint = True
       OnClick = btnTransToMeshCollectionClick
     end
-    object grbxMeshGen: TGroupBox
+    object btnTransToTriFlipModel: TButton
+      Hint = 'Transfer to TriFlip-Model (Brep-LUXOPHIA)'
+      Margins.Left = 5.000000000000000000
+      Margins.Top = 5.000000000000000000
+      Margins.Right = 5.000000000000000000
+      Margins.Bottom = 5.000000000000000000
       Position.X = 5.000000000000000000
-      Position.Y = 189.000000000000000000
+      Position.Y = 483.000000000000000000
+      Size.Width = 167.000000000000000000
+      Size.Height = 24.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 0
+      Text = 'Trans -> TriFlip-Model'
+      ParentShowHint = False
+      ShowHint = True
+      OnClick = btnTransToTriFlipModelClick
+    end
+    object grbxMeshGen: TGroupBox
+      StyledSettings = [Family, Size, Other]
+      Position.X = 5.000000000000000000
+      Position.Y = 263.000000000000000000
       Size.Width = 169.000000000000000000
-      Size.Height = 132.000000000000000000
+      Size.Height = 113.000000000000000000
       Size.PlatformDefault = False
       Text = 'Mesh Generation'
-      TabOrder = 5
+      TextSettings.Font.StyleExt = {00070000000000000004000000}
+      TextSettings.FontColor = claRed
+      TabOrder = 7
       object lbMathFunction: TLabel
         Position.X = 9.000000000000000000
-        Position.Y = 71.000000000000000000
+        Position.Y = 61.000000000000000000
         Size.Width = 135.000000000000000000
         Size.Height = 17.000000000000000000
         Size.PlatformDefault = False
@@ -366,17 +154,17 @@ object MainForm: TMainForm
       end
       object cobxMeshGeneratorChoice: TComboBox
         Items.Strings = (
-          ' 1: Stack of rectangles'
-          ' 2: Pipe section'
-          ' 3: Pipe bend '
-          ' 4: Complex pipe'
-          ' 5: Shaft section'
-          ' 6: Cone section'
-          ' 7: Complex Shaft')
+          ' 1: Stapel Rechtecke'
+          ' 2: Rohrabschnitt'
+          ' 3: Rohrkr'#252'mmung '
+          ' 4: Komplexes Rohr'
+          ' 5: Wellenabschnitt'
+          ' 6: Kegelabschnitt'
+          ' 7: Komplexe Welle')
         Position.X = 5.000000000000000000
         Position.Y = 35.000000000000000000
         Size.Width = 148.000000000000000000
-        Size.Height = 33.000000000000000000
+        Size.Height = 24.000000000000000000
         Size.PlatformDefault = False
         TabOrder = 2
         OnChange = cobxMeshGeneratorChoiceChange
@@ -398,22 +186,25 @@ object MainForm: TMainForm
           '13: cos(abs(x)+abs(y))'
           '14: cos(abs(x)+abs(y))*(abs(x)+abs(y))')
         Position.X = 6.000000000000000000
-        Position.Y = 88.000000000000000000
+        Position.Y = 80.000000000000000000
         Size.Width = 148.000000000000000000
-        Size.Height = 33.000000000000000000
+        Size.Height = 24.000000000000000000
         Size.PlatformDefault = False
         TabOrder = 3
         OnChange = cobxMathFunctionsChange
       end
     end
     object grbxCSG: TGroupBox
+      StyledSettings = [Family, Size, Other]
       Position.X = 5.000000000000000000
-      Position.Y = 320.000000000000000000
+      Position.Y = 381.000000000000000000
       Size.Width = 168.000000000000000000
-      Size.Height = 113.000000000000000000
+      Size.Height = 86.000000000000000000
       Size.PlatformDefault = False
       Text = 'CSG'
-      TabOrder = 6
+      TextSettings.Font.StyleExt = {00070000000000000004000000}
+      TextSettings.FontColor = claRed
+      TabOrder = 8
       object cobx3DBoolTestChoice: TComboBox
         Items.Strings = (
           ' 1: 3DBool - Test 1'
@@ -421,7 +212,7 @@ object MainForm: TMainForm
         Position.X = 7.000000000000000000
         Position.Y = 21.000000000000000000
         Size.Width = 148.000000000000000000
-        Size.Height = 33.000000000000000000
+        Size.Height = 24.000000000000000000
         Size.PlatformDefault = False
         TabOrder = 2
         OnChange = cobx3DBoolTestChoiceChange
@@ -433,9 +224,9 @@ object MainForm: TMainForm
         Margins.Right = 5.000000000000000000
         Margins.Bottom = 5.000000000000000000
         Position.X = 17.000000000000000000
-        Position.Y = 67.000000000000000000
+        Position.Y = 51.000000000000000000
         Size.Width = 129.000000000000000000
-        Size.Height = 30.000000000000000000
+        Size.Height = 24.000000000000000000
         Size.PlatformDefault = False
         TabOrder = 0
         Text = 'Generate center hole '
@@ -452,7 +243,7 @@ object MainForm: TMainForm
       Size.Width = 177.000000000000000000
       Size.Height = 123.000000000000000000
       Size.PlatformDefault = False
-      TabOrder = 7
+      TabOrder = 9
       object lbModelName: TLabel
         Margins.Left = 8.000000000000000000
         Position.X = 8.000000000000000000
@@ -590,5 +381,338 @@ object MainForm: TMainForm
         TabOrder = 2
       end
     end
+    object btnTest: TButton
+      Margins.Left = 5.000000000000000000
+      Margins.Top = 5.000000000000000000
+      Margins.Right = 5.000000000000000000
+      Margins.Bottom = 5.000000000000000000
+      Position.X = 40.000000000000000000
+      Position.Y = 565.000000000000000000
+      Size.Width = 97.000000000000000000
+      Size.Height = 25.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 4
+      Text = 'Test'
+      OnClick = btnTestClick
+    end
+    object grbxMeshLines: TGroupBox
+      StyledSettings = [Family, Size, Other]
+      Position.X = 6.000000000000000000
+      Position.Y = 177.000000000000000000
+      Size.Width = 166.000000000000000000
+      Size.Height = 80.000000000000000000
+      Size.PlatformDefault = False
+      Text = 'Wireframe Mesh'
+      TextSettings.Font.StyleExt = {00070000000000000004000000}
+      TextSettings.FontColor = claRed
+      TabOrder = 10
+      object chbxShowMeshLines: TCheckBox
+        Position.X = 15.000000000000000000
+        Position.Y = 18.000000000000000000
+        TabOrder = 0
+        Text = 'Show Mesh Lines'
+        OnChange = chbxShowMeshLinesChange
+      end
+      object cobxColorMeshLines: TColorComboBox
+        DropDownKind = Custom
+        Color = claBlack
+        DisableFocusEffect = False
+        ItemIndex = 7
+        Position.X = 17.000000000000000000
+        Position.Y = 43.000000000000000000
+        Size.Width = 119.000000000000000000
+        Size.Height = 24.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 1
+        OnChange = cobxColorMeshLinesChange
+      end
+    end
+  end
+  object PanelMain: TPanel
+    Align = Client
+    Size.Width = 891.000000000000000000
+    Size.Height = 633.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 3
+    object Layout1: TLayout
+      Align = Top
+      Size.Width = 891.000000000000000000
+      Size.Height = 121.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 0
+      object Layout2: TLayout
+        Align = Client
+        Size.Width = 891.000000000000000000
+        Size.Height = 43.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 0
+        object ButtonCopy: TButton
+          Align = Left
+          Margins.Left = 5.000000000000000000
+          Margins.Top = 5.000000000000000000
+          Margins.Right = 5.000000000000000000
+          Margins.Bottom = 5.000000000000000000
+          Position.X = 145.000000000000000000
+          Position.Y = 5.000000000000000000
+          Size.Width = 92.000000000000000000
+          Size.Height = 33.000000000000000000
+          Size.PlatformDefault = False
+          TabOrder = 1
+          Text = 'Copy'
+          OnClick = ButtonCopyClick
+        end
+        object ButtonDel: TButton
+          Align = Left
+          Margins.Left = 5.000000000000000000
+          Margins.Top = 5.000000000000000000
+          Margins.Right = 5.000000000000000000
+          Margins.Bottom = 5.000000000000000000
+          Position.X = 247.000000000000000000
+          Position.Y = 5.000000000000000000
+          Size.Width = 92.000000000000000000
+          Size.Height = 33.000000000000000000
+          Size.PlatformDefault = False
+          TabOrder = 0
+          Text = 'Delete Copy'
+          OnClick = ButtonDelClick
+        end
+        object chbxMove: TCheckBox
+          Align = Left
+          Margins.Left = 5.000000000000000000
+          Margins.Top = 5.000000000000000000
+          Margins.Right = 5.000000000000000000
+          Margins.Bottom = 5.000000000000000000
+          Position.X = 5.000000000000000000
+          Position.Y = 5.000000000000000000
+          Size.Width = 60.000000000000000000
+          Size.Height = 33.000000000000000000
+          Size.PlatformDefault = False
+          TabOrder = 3
+          Text = 'Move'
+          OnChange = chbxMoveChange
+        end
+        object chbxLight: TCheckBox
+          Align = Left
+          IsChecked = True
+          Margins.Left = 5.000000000000000000
+          Margins.Top = 5.000000000000000000
+          Margins.Right = 5.000000000000000000
+          Margins.Bottom = 5.000000000000000000
+          Position.X = 75.000000000000000000
+          Position.Y = 5.000000000000000000
+          Size.Width = 60.000000000000000000
+          Size.Height = 33.000000000000000000
+          Size.PlatformDefault = False
+          TabOrder = 2
+          Text = 'Light'
+          OnChange = chbxLightChange
+        end
+        object PanelScale: TPanel
+          Align = Client
+          Size.Width = 547.000000000000000000
+          Size.Height = 43.000000000000000000
+          Size.PlatformDefault = False
+          TabOrder = 5
+          object lbScaleValue: TLabel
+            Align = Right
+            Position.X = 440.000000000000000000
+            Size.Width = 107.000000000000000000
+            Size.Height = 43.000000000000000000
+            Size.PlatformDefault = False
+            TextSettings.HorzAlign = Center
+            Text = '...'
+            TabOrder = 0
+          end
+          object lbCoord: TLabel
+            Align = Client
+            Size.Width = 440.000000000000000000
+            Size.Height = 43.000000000000000000
+            Size.PlatformDefault = False
+            TextSettings.HorzAlign = Center
+            Text = '...'
+            TabOrder = 1
+          end
+        end
+      end
+      object TrackBarForCamera: TTrackBar
+        Align = Top
+        CanParentFocus = True
+        Orientation = Horizontal
+        Margins.Left = 100.000000000000000000
+        Margins.Top = 10.000000000000000000
+        Margins.Right = 60.000000000000000000
+        Margins.Bottom = 10.000000000000000000
+        Position.X = 100.000000000000000000
+        Position.Y = 10.000000000000000000
+        Size.Width = 731.000000000000000000
+        Size.Height = 19.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 2
+        Value = 20.000000000000000000
+        OnTracking = TrackBarForCameraTracking
+      end
+      object TrackBarForScale: TTrackBar
+        Align = Top
+        CanParentFocus = True
+        Min = -100.000000000000000000
+        Orientation = Horizontal
+        Margins.Left = 100.000000000000000000
+        Margins.Top = 10.000000000000000000
+        Margins.Right = 60.000000000000000000
+        Margins.Bottom = 10.000000000000000000
+        Position.X = 100.000000000000000000
+        Position.Y = 49.000000000000000000
+        Size.Width = 731.000000000000000000
+        Size.Height = 19.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 1
+        OnTracking = TrackBarForScaleTracking
+      end
+      object lbCamera: TLabel
+        Position.X = 10.000000000000000000
+        Position.Y = 12.000000000000000000
+        Size.Width = 95.000000000000000000
+        Size.Height = 17.000000000000000000
+        Size.PlatformDefault = False
+        Text = 'Camera: z-Axis'
+        TabOrder = 4
+      end
+      object lbScale: TLabel
+        Position.X = 11.000000000000000000
+        Position.Y = 50.000000000000000000
+        Size.Width = 63.000000000000000000
+        Size.Height = 17.000000000000000000
+        Size.PlatformDefault = False
+        Text = 'Scale: (x,y,z)'
+        TabOrder = 3
+      end
+      object lbCameraZValue: TLabel
+        Position.X = 840.000000000000000000
+        Position.Y = 10.000000000000000000
+        Size.Width = 52.000000000000000000
+        Size.Height = 17.000000000000000000
+        Size.PlatformDefault = False
+        Text = '...'
+        TabOrder = 6
+      end
+      object lbScaleTrackbarValue: TLabel
+        Position.X = 840.000000000000000000
+        Position.Y = 49.000000000000000000
+        Size.Width = 52.000000000000000000
+        Size.Height = 17.000000000000000000
+        Size.PlatformDefault = False
+        Text = '...'
+        TabOrder = 5
+      end
+    end
+    object Viewport3D: TViewport3D
+      Align = Client
+      Color = claDodgerblue
+      Size.Width = 891.000000000000000000
+      Size.Height = 512.000000000000000000
+      Size.PlatformDefault = False
+      OnMouseDown = Viewport3DMouseDown
+      OnMouseMove = Viewport3DMouseMove
+      OnMouseWheel = Viewport3DMouseWheel
+      object Light: TLight
+        HitTest = True
+        Color = claWhite
+        LightType = Directional
+        SpotCutOff = 100.000000000000000000
+        SpotExponent = 1.000000000000000000
+        Position.X = -8.000000000000000000
+        Position.Y = -5.000000000000000000
+        Position.Z = -5.000000000000000000
+        RotationAngle.X = 340.000000000000000000
+        RotationAngle.Y = 50.000000000000000000
+        Width = 1.000000000000000000
+        Height = 1.000000000000000000
+        Depth = 1.000000000000000000
+        OnClick = DummyCenterClick
+        Quanternion = 
+          '(0.142244502902031,-0.416197538375854,-0.0996005684137344,-0.892' +
+          '538726329803)'
+      end
+      object Grid3D: TGrid3D
+        Marks = 4.000000000000000000
+        Frequency = 1.000000000000000000
+        LineColor = x50505050
+        RotationAngle.X = 90.000000000000000000
+        Locked = True
+        Width = 50.000000000000000000
+        Height = 30.000000000000000000
+        Depth = 0.001000000047497451
+        Opacity = 0.500000000000000000
+        HitTest = False
+        OnClick = DummyCenterClick
+        Quanternion = '(0.707106590270996,0,0,0.707106947898865)'
+      end
+      object RoundCube: TRoundCube
+        Position.X = 12.000000000000000000
+        Position.Y = -2.000000000000000000
+        RotationAngle.Y = 60.000000000000000000
+        Width = 1.000000000000000000
+        Height = 4.000000000000000000
+        Depth = 0.400000005960464500
+        OnClick = DummyCenterClick
+        MaterialSource = LightMaterialSource1
+        Quanternion = '(0,-0.500000417232513,0,-0.866025269031525)'
+      end
+      object DummyCenter: TDummy
+        Locked = True
+        Width = 0.400000005960464500
+        Height = 0.400000005960464500
+        Depth = 0.400000005960464500
+        OnClick = DummyCenterClick
+      end
+      object Text3D: TText3D
+        Position.Y = 6.000000000000000000
+        Width = 16.000000000000000000
+        Height = 5.000000000000000000
+        Depth = 0.039999999105930330
+        HitTest = False
+        Font.Size = 1.000000000000000000
+        Text = 'Math Function'
+        WordWrap = False
+        Flatness = 1.000000000000000000
+        Sides = [Front, Back, Shaft]
+      end
+      object StrokeCubeForMesh: TStrokeCube
+        Color = claWhite
+        Position.Y = -5.000000000000000000
+        Width = 10.000000000000000000
+        Height = 10.000000000000000000
+        Depth = 10.000000000000000000
+        OnClick = DummyCenterClick
+      end
+    end
+  end
+  object PanelBottom: TPanel
+    Align = Bottom
+    Position.Y = 638.000000000000000000
+    Size.Width = 891.000000000000000000
+    Size.Height = 50.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 4
+    object txaProt: TMemo
+      Touch.InteractiveGestures = [Pan, LongTap, DoubleTap]
+      DataDetectorTypes = []
+      Align = Client
+      Size.Width = 891.000000000000000000
+      Size.Height = 50.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 0
+      Viewport.Width = 887.000000000000000000
+      Viewport.Height = 46.000000000000000000
+    end
+  end
+  object Splitter1: TSplitter
+    Align = Bottom
+    Cursor = crVSplit
+    MinSize = 20.000000000000000000
+    Position.Y = 633.000000000000000000
+    Size.Width = 891.000000000000000000
+    Size.Height = 5.000000000000000000
+    Size.PlatformDefault = False
   end
 end
