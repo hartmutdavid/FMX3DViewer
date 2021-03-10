@@ -14,3 +14,5 @@ New:
 - Optional use of the LUXOPHIA TriFlip-Model
 
 Tested with Delphi 10.x
+
+![Example](./imageGes.png?raw=true "FMX3DViewer")
